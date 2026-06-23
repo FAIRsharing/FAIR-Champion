@@ -555,7 +555,11 @@ module Champion
           render_error(406,
                        'The data provided were invalid. Check that you are using a registered algorithm')
         end
-        @result = algorithm.process
+        begin
+          @result = algorithm.process
+        rescue Champion::Core::EndpointLookupTimeout => e
+          render_error(504, "#{e.message}. The assessment could not continue.")
+        end
         warn "RESULT @result is #{@result.inspect} "
         case content_type
         when %r{text/html}
@@ -619,6 +623,20 @@ module Champion
     # @param message [String] The error message to display.
     # @return [String] The rendered ERB error template.
     def render_error(status, message)
+      accepted_type = request.accept.find do |type|
+        %w[application/json application/ld+json text/json text/plain text/html].include?(type.to_s)
+      end
+
+      case accepted_type.to_s
+      when 'application/json', 'application/ld+json', 'text/json'
+        content_type :json
+        halt status, { error: message, status: status }.to_json
+      when 'text/plain'
+        content_type :text
+        halt status, message
+      end
+
+      content_type :html
       halt status, erb(:error, locals: { message: message })
     end
   end

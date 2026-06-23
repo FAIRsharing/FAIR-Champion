@@ -13,6 +13,17 @@ module Champion
   # The Core class handles assessment execution, test endpoint retrieval, and test execution
   # for the Champion application, interacting with SPARQL endpoints and external test APIs.
   class Core
+    FDP_INDEX_SPARQL_READ_TIMEOUT = 10
+
+    class EndpointLookupTimeout < StandardError
+      attr_reader :testid
+
+      def initialize(testid:)
+        @testid = testid
+        super("Timed out looking up endpoint for test #{testid}")
+      end
+    end
+
     # @!attribute testhost
     #   @return [String, nil] The hostname for test services.
     # @!attribute champhost
@@ -134,7 +145,7 @@ module Champion
     def get_test_endpoint_for_testid(testid:)
       fdp_url = Configuration.fdpindex_sparql
       # Create a SPARQL client instance
-      client = SPARQL::Client.new(fdp_url)
+      client = SPARQL::Client.new(fdp_url, read_timeout: FDP_INDEX_SPARQL_READ_TIMEOUT)
       # Define your SPARQL query to get the associated endpoint for a testid
       query = <<-SPARQL
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -149,6 +160,8 @@ module Champion
       solutions = client.query(query)
       warn solutions.inspect
       solutions.first[:endpoint].value # can be onlhy one
+    rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
+      raise EndpointLookupTimeout.new(testid: testid.to_s.strip)
     end
 
     #  THIS IS CALLED BY ALGORITHM!

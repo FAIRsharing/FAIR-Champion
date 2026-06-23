@@ -66,6 +66,34 @@ RSpec.describe Champion::Core do
       endpoint = core.get_test_endpoint_for_testid(testid: 'https://tests.ostrails.eu/tests/fc_metadata_includes_license')
       expect(endpoint).to eq('https://tests.ostrails.eu/assess/test/fc_metadata_includes_license')
     end
+
+    it 'sets a read timeout on the FDP index SPARQL client' do
+      allow(SPARQL::Client).to receive(:new).and_return(sparql_client)
+      allow(sparql_client).to receive(:query).and_return([
+                                                           solution(
+                                                             endpoint: 'https://tests.example/test1/api'
+                                                           )
+                                                         ])
+
+      core.get_test_endpoint_for_testid(testid: 'https://tests.example/test1')
+
+      expect(SPARQL::Client).to have_received(:new).with(
+        Configuration.fdpindex_sparql,
+        read_timeout: Champion::Core::FDP_INDEX_SPARQL_READ_TIMEOUT
+      )
+    end
+
+    it 'raises an endpoint lookup timeout when the FDP index SPARQL query times out' do
+      allow(SPARQL::Client).to receive(:new).and_return(sparql_client)
+      allow(sparql_client).to receive(:query).and_raise(Net::ReadTimeout)
+
+      expect do
+        core.get_test_endpoint_for_testid(testid: ' https://tests.example/test1 ')
+      end.to raise_error(Champion::Core::EndpointLookupTimeout) { |error|
+        expect(error.testid).to eq('https://tests.example/test1')
+        expect(error.message).to include('Timed out looking up endpoint')
+      }
+    end
   end
 
   describe '#execute_on_endpoints' do
