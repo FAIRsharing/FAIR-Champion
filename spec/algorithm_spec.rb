@@ -56,6 +56,34 @@ RSpec.describe Algorithm do
       algo = described_class.new(calculation_uri: calculation_uri, baseURI: base_uri)
       expect(algo.valid).to be false
     end
+
+    it 'sets timeouts when fetching the Google Sheets CSV' do
+      response = instance_double('RestClient::Response', body: csv_response)
+      allow(RestClient::Request).to receive(:execute).and_return(response)
+
+      described_class.new(calculation_uri: calculation_uri, baseURI: base_uri, guid: guid)
+
+      expect(RestClient::Request).to have_received(:execute).with(
+        hash_including(
+          method: :get,
+          url: "#{calculation_uri}/export?exportFormat=csv",
+          max_redirects: 10,
+          open_timeout: Algorithm::GOOGLE_SHEETS_OPEN_TIMEOUT,
+          timeout: Algorithm::GOOGLE_SHEETS_TIMEOUT
+        )
+      )
+    end
+
+    it 'raises a spreadsheet fetch timeout when the Google Sheets CSV request times out' do
+      allow(RestClient::Request).to receive(:execute).and_raise(RestClient::Exceptions::OpenTimeout)
+
+      expect do
+        described_class.new(calculation_uri: calculation_uri, baseURI: base_uri, guid: guid)
+      end.to raise_error(Algorithm::SpreadsheetFetchTimeout) { |error|
+        expect(error.calculation_uri).to eq(calculation_uri)
+        expect(error.message).to include('Timed out fetching algorithm spreadsheet')
+      }
+    end
   end
 
   describe '#load_configuration' do

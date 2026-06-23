@@ -26,6 +26,18 @@ end
 class Algorithm
   include RDF
 
+  GOOGLE_SHEETS_OPEN_TIMEOUT = 10
+  GOOGLE_SHEETS_TIMEOUT = 10
+
+  class SpreadsheetFetchTimeout < StandardError
+    attr_reader :calculation_uri
+
+    def initialize(calculation_uri:)
+      @calculation_uri = calculation_uri
+      super("Timed out fetching algorithm spreadsheet #{calculation_uri}")
+    end
+  end
+
   # RDF Vocabulary for DCAT, as the built-in DCAT vocab does not recognize "version".
   DCAT = RDF::Vocabulary.new('http://www.w3.org/ns/dcat#')
 
@@ -157,11 +169,16 @@ class Algorithm
         'Referer' => 'https://docs.google.com/',
         'Connection' => 'keep-alive'
       },
-      max_redirects: 10
+      max_redirects: 10,
+      open_timeout: GOOGLE_SHEETS_OPEN_TIMEOUT,
+      timeout: GOOGLE_SHEETS_TIMEOUT
     )
     # Split CSV into lines to identify blocks
     warn "response is #{response.inspect}"
     @csv = response.body.encode('UTF-8', invalid: :replace, undef: :replace, replace: "\u{FFFD}").lines
+  rescue RestClient::Exceptions::OpenTimeout, RestClient::Exceptions::ReadTimeout,
+         RestClient::Exceptions::Timeout, Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
+    raise SpreadsheetFetchTimeout.new(calculation_uri: @calculation_uri)
   end
 
   # Processes the algorithm by loading configuration, running tests (if needed), and evaluating results.

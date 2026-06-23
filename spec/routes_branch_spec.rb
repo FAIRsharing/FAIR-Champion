@@ -551,6 +551,48 @@ RSpec.describe 'Champion route branches' do
       expect(last_response.body).to include('Timed out looking up endpoint for test https://tests.example/test1')
     end
 
+    it 'returns Google Sheets timeouts as JSON errors' do
+      allow(Algorithm).to receive(:new)
+        .and_raise(Algorithm::SpreadsheetFetchTimeout.new(calculation_uri: 'https://docs.google.com/spreadsheets/d/algo1'))
+
+      post '/champion/assess/algorithm/d/algo1',
+           { guid: 'https://example.org/target' }.to_json,
+           { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json' }
+
+      expect(last_response.status).to eq(504)
+      expect(last_response.content_type).to include('application/json')
+      expect(JSON.parse(last_response.body)).to include(
+        'error' => a_string_including('Timed out fetching algorithm spreadsheet https://docs.google.com/spreadsheets/d/algo1'),
+        'status' => 504
+      )
+    end
+
+    it 'returns Google Sheets timeouts as HTML errors' do
+      allow(Algorithm).to receive(:new)
+        .and_raise(Algorithm::SpreadsheetFetchTimeout.new(calculation_uri: 'https://docs.google.com/spreadsheets/d/algo1'))
+
+      post '/champion/assess/algorithm/d/algo1',
+           { guid: 'https://example.org/target' }.to_json,
+           { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/html' }
+
+      expect(last_response.status).to eq(504)
+      expect(last_response.content_type).to include('text/html')
+      expect(last_response.body).to include('Timed out fetching algorithm spreadsheet https://docs.google.com/spreadsheets/d/algo1')
+    end
+
+    it 'returns Google Sheets timeouts as plain text errors' do
+      allow(Algorithm).to receive(:new)
+        .and_raise(Algorithm::SpreadsheetFetchTimeout.new(calculation_uri: 'https://docs.google.com/spreadsheets/d/algo1'))
+
+      post '/champion/assess/algorithm/d/algo1',
+           { guid: 'https://example.org/target' }.to_json,
+           { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/plain' }
+
+      expect(last_response.status).to eq(504)
+      expect(last_response.content_type).to include('text/plain')
+      expect(last_response.body).to include('Timed out fetching algorithm spreadsheet https://docs.google.com/spreadsheets/d/algo1')
+    end
+
     it 'returns algorithm assessment resultsets for text/turtle requests' do
       post '/champion/assess/algorithm/d/algo1',
            { guid: 'https://example.org/target' }.to_json,

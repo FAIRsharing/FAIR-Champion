@@ -550,15 +550,17 @@ module Champion
 
         render_error(400, 'GUID or ResultSet (or file upload) are required') unless resultset || guid
 
-        algorithm = Algorithm.new(calculation_uri: scoringfunction, guid: guid, resultset: resultset)
-        unless algorithm.valid
-          render_error(406,
-                       'The data provided were invalid. Check that you are using a registered algorithm')
-        end
         begin
+          algorithm = Algorithm.new(calculation_uri: scoringfunction, guid: guid, resultset: resultset)
+          unless algorithm.valid
+            render_error(406,
+                         'The data provided were invalid. Check that you are using a registered algorithm')
+          end
           @result = algorithm.process
+        rescue Algorithm::SpreadsheetFetchTimeout => e
+          render_error(504, "#{e.message}. The assessment could not continue; Google sheets query timed out.")
         rescue Champion::Core::EndpointLookupTimeout => e
-          render_error(504, "#{e.message}. The assessment could not continue.")
+          render_error(504, "#{e.message}. The assessment could not continue; SPARQL query timed out.")
         end
         warn "RESULT @result is #{@result.inspect} "
         case content_type
