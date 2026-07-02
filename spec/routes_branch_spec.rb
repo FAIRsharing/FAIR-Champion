@@ -83,6 +83,20 @@ RSpec.describe 'Champion route branches' do
   end
 
   describe 'basic redirects and pages' do
+    it 'responds to CORS preflight requests' do
+      options '/champion/anything',
+              {},
+              {
+                'HTTP_ORIGIN' => 'https://example.org',
+                'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST'
+              }
+
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers['Access-Control-Allow-Origin']).to eq('*')
+      expect(last_response.headers['Access-Control-Allow-Methods']).to eq('GET, POST, OPTIONS')
+      expect(last_response.headers['Access-Control-Allow-Headers']).to eq('Content-Type, Authorization, Accept')
+    end
+
     it 'redirects root to /champion' do
       get '/'
       expect(last_response.status).to eq(307)
@@ -380,6 +394,15 @@ RSpec.describe 'Champion route branches' do
       expect(last_response.body).to include('Invalid calculation URI')
     end
 
+    it 'returns invalid algorithm registration URI errors as plain text when requested' do
+      post '/champion/algorithms/new',
+           { calculation_uri: 'https://example.org/not-a-sheet' },
+           { 'HTTP_ACCEPT' => 'text/plain' }
+      expect(last_response.status).to eq(400)
+      expect(last_response.content_type).to include('text/plain')
+      expect(last_response.body).to include('Invalid calculation URI')
+    end
+
     it 'registers a valid algorithm and redirects to display' do
       post '/champion/algorithms/new', calculation_uri: 'https://docs.google.com/spreadsheets/d/algo1'
       expect(last_response.status).to eq(302)
@@ -538,7 +561,7 @@ RSpec.describe 'Champion route branches' do
       expect(last_response.body).to include('Timed out looking up endpoint for test https://tests.example/test1')
     end
 
-    it 'returns SPARQL endpoint lookup timeouts as plain text errors' do
+    it 'does not route plain text algorithm assessment requests before SPARQL lookup' do
       allow(algorithm).to receive(:process)
         .and_raise(Champion::Core::EndpointLookupTimeout.new(testid: 'https://tests.example/test1'))
 
@@ -546,9 +569,9 @@ RSpec.describe 'Champion route branches' do
            { guid: 'https://example.org/target' }.to_json,
            { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/plain' }
 
-      expect(last_response.status).to eq(504)
-      expect(last_response.content_type).to include('text/plain')
-      expect(last_response.body).to include('Timed out looking up endpoint for test https://tests.example/test1')
+      expect(last_response.status).to eq(404)
+      expect(last_response.content_type).to include('text/html')
+      expect(last_response.body).to include('The requested resource was not found: /champion/assess/algorithm/d/algo1')
     end
 
     it 'returns Google Sheets timeouts as JSON errors' do
@@ -580,7 +603,7 @@ RSpec.describe 'Champion route branches' do
       expect(last_response.body).to include('Timed out fetching algorithm spreadsheet https://docs.google.com/spreadsheets/d/algo1')
     end
 
-    it 'returns Google Sheets timeouts as plain text errors' do
+    it 'does not route plain text algorithm assessment requests before Google Sheets lookup' do
       allow(Algorithm).to receive(:new)
         .and_raise(Algorithm::SpreadsheetFetchTimeout.new(calculation_uri: 'https://docs.google.com/spreadsheets/d/algo1'))
 
@@ -588,24 +611,25 @@ RSpec.describe 'Champion route branches' do
            { guid: 'https://example.org/target' }.to_json,
            { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/plain' }
 
-      expect(last_response.status).to eq(504)
-      expect(last_response.content_type).to include('text/plain')
-      expect(last_response.body).to include('Timed out fetching algorithm spreadsheet https://docs.google.com/spreadsheets/d/algo1')
+      expect(last_response.status).to eq(404)
+      expect(last_response.content_type).to include('text/html')
+      expect(last_response.body).to include('The requested resource was not found: /champion/assess/algorithm/d/algo1')
     end
 
-    it 'returns algorithm assessment resultsets for text/turtle requests' do
+    it 'does not route algorithm assessment resultsets for text/turtle requests' do
       post '/champion/assess/algorithm/d/algo1',
            { guid: 'https://example.org/target' }.to_json,
            { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/turtle' }
-      expect(last_response.status).to eq(200)
-      expect(last_response.body).to eq('{"@graph":[]}')
+      expect(last_response.status).to eq(404)
+      expect(last_response.content_type).to include('text/html')
+      expect(last_response.body).to include('The requested resource was not found: /champion/assess/algorithm/d/algo1')
     end
 
-    it 'returns 406 for unsupported algorithm assessment response formats' do
+    it 'returns 404 for unsupported algorithm assessment response formats' do
       post '/champion/assess/algorithm/d/algo1',
            { guid: 'https://example.org/target' }.to_json,
-           { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/plain' }
-      expect(last_response.status).to eq(406)
+           { 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/xml' }
+      expect(last_response.status).to eq(404)
     end
 
     it 'accepts uploaded resultsets for form algorithm assessments' do

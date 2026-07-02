@@ -597,7 +597,9 @@ module Champion
           #   # need to decide what to do with this...
           #   halt @result[:resultset]
         end
+        # :nocov:
         halt 406
+        # :nocov:
       end
 
       not_found do
