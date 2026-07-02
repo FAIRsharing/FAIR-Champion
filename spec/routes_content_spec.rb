@@ -177,6 +177,53 @@ RSpec.describe 'Champion Routes' do
       expect { JSON.parse(last_response.body) }.not_to raise_error
     end
 
+    it 'returns nested JSON values instead of JSON strings' do
+      metadata = RDF::Graph.new
+      metadata << RDF::Statement.new(
+        RDF::URI('https://example.org/algorithm'),
+        RDF::Vocab::DC.title,
+        RDF::Literal.new('Algorithm 1')
+      )
+      allow(algorithm_mock).to receive(:process).and_return(
+        {
+          metadata: metadata,
+          test_results: {},
+          narratives: [],
+          resultset: '{"@context":{},"@graph":[]}',
+          testedguid: 'https://example.org/target/456',
+          guidances: [],
+          tests: [],
+          conditions: []
+        }
+      )
+
+      post '/champion/assess/algorithm/algo1', payload, { 'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json' }
+
+      parsed = JSON.parse(last_response.body)
+      expect(parsed['resultset']).to eq('@context' => {}, '@graph' => [])
+      expect(parsed['metadata']).to be_an(Array)
+      expect(parsed['metadata'].first).to include('@id' => 'https://example.org/algorithm')
+    end
+
+    it 'leaves malformed JSON-like resultset strings unchanged' do
+      allow(algorithm_mock).to receive(:process).and_return(
+        {
+          resultset: '{"@graph":',
+          test_results: {},
+          narratives: [],
+          testedguid: 'https://example.org/target/456',
+          guidances: [],
+          tests: [],
+          conditions: []
+        }
+      )
+
+      post '/champion/assess/algorithm/algo1', payload, { 'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json' }
+
+      parsed = JSON.parse(last_response.body)
+      expect(parsed['resultset']).to eq('{"@graph":')
+    end
+
     # it 'returns JSON for application/ld+json' do
     #   post '/champion/assess/algorithm/algo1', payload, { 'HTTP_ACCEPT' => 'application/ld+json', 'CONTENT_TYPE' => 'application/json' }
     #   expect(last_response.status).to eq(200)

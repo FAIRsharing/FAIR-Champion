@@ -576,7 +576,6 @@ module Champion
         rescue Champion::Core::EndpointLookupTimeout => e
           render_error(504, "#{e.message}. The assessment could not continue; SPARQL query timed out.")
         end
-        @result = algorithm.process
         # @result is:    {
         #   metadata: metadata,
         #   test_results: test_results,
@@ -592,7 +591,7 @@ module Champion
         when %r{text/html}
           halt erb :algorithm_execution_output, layout: :algorithm_execution_layout
         when %r{application/json} || %r{application/ld+json}
-          halt @result.to_json
+          halt algorithm_json_response(@result).to_json
           # when %r{text/turtle}
           #   # need to decide what to do with this...
           #   halt @result[:resultset]
@@ -668,6 +667,30 @@ module Champion
 
       content_type :html
       halt status, erb(:error, locals: { message: message })
+    end
+
+    def algorithm_json_response(result)
+      response = result.dup
+      response[:metadata] = jsonld_graph(response[:metadata])
+      response[:resultset] = parsed_json_string(response[:resultset])
+      response
+    end
+
+    def jsonld_graph(value)
+      return value unless value.respond_to?(:dump)
+
+      parsed_json_string(value.dump(:jsonld))
+    end
+
+    def parsed_json_string(value)
+      return value unless value.is_a?(String)
+
+      stripped = value.strip
+      return value unless stripped.start_with?('{', '[')
+
+      JSON.parse(value)
+    rescue JSON::ParserError
+      value
     end
   end
 end
