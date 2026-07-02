@@ -153,6 +153,19 @@ RSpec.describe Algorithm do
       title_triple = algo.metadata.query([nil, RDF::Vocab::DC.title, nil]).first
       expect(title_triple.object.to_s).to eq('Test Algorithm')
     end
+
+    it 'skips metadata rows without a DCAT property' do
+      csv_with_blank_metadata_row = dirty_csv.sub(
+        "title,Test Algorithm ,,,,\n",
+        "title,Test Algorithm ,,,,\n,metadata note without property,,,,\n"
+      )
+      stub_request(:get, %r{https://docs\.google\.com/spreadsheets/d/.*})
+        .to_return(status: 200, body: csv_with_blank_metadata_row, headers: { 'Content-Type' => 'text/csv' })
+
+      algo = described_class.new(calculation_uri: calculation_uri, baseURI: base_uri, guid: guid)
+      expect { algo.gather_metadata }.not_to raise_error
+      expect(algo.benchmarkguid).to eq('https://example.org/benchmark')
+    end
   end
 
   describe '#evaluate_conditions' do

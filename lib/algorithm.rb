@@ -228,24 +228,27 @@ class Algorithm
     # metadata is an RDF__Graph
     csv_data.each do |row|
       warn "\n\nINSPECTING ROW \n #{row.inspect}\n\n"
-      warn "dcat property #{row['DCAT Property']}"
-      next if row['DCAT Property'].strip == 'isImplementationOf' && !@benchmarkguid = row['Value']
+      property = row['DCAT Property']&.strip
+      value = row['Value']&.strip
+      warn "dcat property #{property}"
+      next if property.nil? || property.empty?
+
+      @benchmarkguid = value if property == 'isImplementationOf'
 
       # Process COntactPoint separately
-      if row['DCAT Property'].strip == 'contactPoint'
+      if property == 'contactPoint'
         uniqid = Time.now.to_i
         contactnode = RDF::URI.new("urn:local:champion:contactpoint:#{uniqid}")
         predicate = PREDICATES[:contactPoint]
         metadata << RDF::Statement.new(subject, predicate, contactnode)
         metadata << RDF::Statement.new(contactnode, RDF.type, VCARD.Individual)
-        metadata << RDF::Statement.new(contactnode, VCARD.hasEmail, RDF::Literal.new(row['Value']))
+        metadata << RDF::Statement.new(contactnode, VCARD.hasEmail, RDF::Literal.new(value))
         next
       end
 
-      predicate = PREDICATES[row['DCAT Property'].strip.to_sym]
+      predicate = PREDICATES[property.to_sym]
       # warn "working with predicate #{predicate}"
-      predicate ||= RDF::URI.new("urn:unknown_property:#{row['DCAT Property']}")
-      value = row['Value']&.strip
+      predicate ||= RDF::URI.new("urn:unknown_property:#{property}")
       value = if value =~ %r{^https?://}
                 RDF::URI.new(value)
               else
