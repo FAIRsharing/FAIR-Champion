@@ -7,6 +7,9 @@ All notable changes to FAIR Champion are documented here.
 ### Added
 - Full user documentation in the README: key concepts, a walk-through of every homepage function (browsing/executing metric tests, running benchmark quality assessments, registering algorithms and tests) with screenshot placeholders in `docs/images/`, API curl examples, deployment instructions, and configuration reference
 
+### Fixed
+- `Gemfile.lock` re-synced to gem version 1.1.11 — CI runs bundler in frozen mode (`bundler-cache: true`), which fails whenever the locked path-gem version lags behind the gemspec
+
 ## [1.1.10] - 2026-07-02
 
 ### Changed
