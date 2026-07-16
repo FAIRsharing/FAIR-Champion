@@ -46,7 +46,7 @@ A public instance is available at **<https://w3id.org/FAIR-Champion>** (hosted a
 
 The easiest way to use FAIR Champion is the public instance:
 
-> **<https://tools.ostrails.eu/champion>**
+> **<https://w3id.org/FAIR-Champion>**
 
 Everything described in the walk-through below can be done there with no installation. If you want to host your own instance, see [Running your own instance](#running-your-own-instance).
 
