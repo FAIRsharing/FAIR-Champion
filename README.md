@@ -88,7 +88,9 @@ To **execute a test**, click its title. Champion reads the test's OpenAPI defini
 * Most tests ask for a **Resource Identifier** — the GUID of the digital object you want to assess
 * Some tests (e.g. RO-Crate validators) instead accept a **metadata file upload** (JSON)
 
-Enter your GUID (or select your file) and click submit.
+Enter your GUID and click submit.  
+
+**NOTE:  In the case of DOIs, you can either enter the DOI in its raw form (e.g. 10.15151/ESRF-DC-572252655) or as a URL (https://doi.org/10.15151/ESRF-DC-572252655).  If you enter it as a raw DOI, you will include the datacite/crossref metadata in addition to landing page metadata as part of the test.  If you enter it as a URL, you will skip datacite/crossref metadata extraction and retrieve data exclusively from the landing page.**
 
 ![The test execution form with a GUID filled in](docs/images/test-execute-form.png)
 
@@ -134,19 +136,15 @@ An algorithm is defined entirely in a **Google Spreadsheet** — no code require
 
 Make sure the spreadsheet is **publicly readable** ("Anyone with the link can view"), then go to **"Register a new Benchmark Quality Assessment Algorithm"** (`/champion/algorithms/new`), paste the spreadsheet URL, and click **Register**.
 
-![The algorithm registration form](docs/images/algorithm-register.png)
 
 Champion extracts the metadata, registers the algorithm in the OSTrails Index (this takes a few seconds), and then shows the algorithm's display page. Your algorithm now appears in the algorithm list and in the assessment selection form, and can be executed by anyone.
 
-![The algorithm display page after registration](docs/images/algorithm-display.png)
 
 ### Registering a new Metric Test
 
 If you have built your own Metric Test (a web service that follows the OSTrails test API pattern and describes itself in DCAT), you can register it from **"Register a new Metric Test"** (`/champion/tests/new`).
 
 Provide the **URL of your test's DCAT record** — the URL must return Turtle (TTL) directly, *without* requiring content negotiation. Click **Register Test**.
-
-![The test registration form](docs/images/test-register.png)
 
 Champion submits the record to the OSTrails FDP Index; once ingested, your test appears in the test list alongside all the others, ready to be executed and referenced from algorithm spreadsheets.
 
