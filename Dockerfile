@@ -22,7 +22,7 @@ WORKDIR /server
 
 # Copy Gemfile and Gemfile.lock first to cache bundle install
 COPY Gemfile Gemfile.lock fair-champion.gemspec /server/
-RUN bundle install --without development test
+RUN bundle config set --local without 'development test' && bundle install
 
 # Copy the rest of the application code
 COPY . /server

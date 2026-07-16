@@ -9,6 +9,7 @@ All notable changes to FAIR Champion are documented here.
 
 ### Fixed
 - `Gemfile.lock` re-synced to gem version 1.1.11 — CI runs bundler in frozen mode (`bundler-cache: true`), which fails whenever the locked path-gem version lags behind the gemspec
+- Dockerfile: `bundle install --without development test` replaced with `bundle config set --local without 'development test' && bundle install` — the lockfile pins Bundler 4.0.3, which removed the `--without` flag, so the image build failed
 
 ## [1.1.10] - 2026-07-02
 
