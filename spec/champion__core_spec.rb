@@ -18,6 +18,15 @@ RSpec.describe Champion::Core do
       endpoint = core.get_test_endpoint_for_testid(testid: 'https://tests.ostrails.eu/tests/fc_metadata_includes_license')
       expect(endpoint).to eq('https://tests.ostrails.eu/assess/test/fc_metadata_includes_license')
     end
+
+    it 'returns nil when the FDP index has no endpoint for the test' do
+      sparql_client = instance_double(SPARQL::Client, query: [])
+      allow(SPARQL::Client).to receive(:new).and_return(sparql_client)
+
+      endpoint = core.get_test_endpoint_for_testid(testid: 'https://tests.example/missing')
+
+      expect(endpoint).to be_nil
+    end
   end
 
   describe '#run_test' do
@@ -31,6 +40,20 @@ RSpec.describe Champion::Core do
         testid: 'https://tests.ostrails.eu/tests/fc_metadata_includes_license'
       )
       expect(result).to eq('result' => 'pass')
+    end
+
+    it 'returns an indeterminate test result when the endpoint is missing' do
+      testid = 'https://tests.example/missing'
+
+      result = core.run_test(testapi: nil, guid: subject, testid: testid)
+
+      expect(result).to include(
+        '@type' => 'ftr:TestResult',
+        'value' => 'indeterminate',
+        'log' => "No dcat:endpointURL was found for test #{testid}",
+        'outputFromTest' => { '@id' => testid }
+      )
+      expect(result['@id']).to start_with('urn:fairchampion:missing-endpoint:')
     end
   end
 end
