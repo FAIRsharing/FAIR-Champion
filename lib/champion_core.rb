@@ -159,7 +159,7 @@ module Champion
       warn "\n\n\n\nQuery against #{fdp_url}  is \n#{query}\n\n\n\n"
       solutions = client.query(query)
       warn solutions.inspect
-      solutions.first[:endpoint].value # can be onlhy one
+      solutions.first&.[](:endpoint)&.value # can be only one
     rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
       raise EndpointLookupTimeout.new(testid: testid.to_s.strip)
     end
@@ -224,6 +224,16 @@ module Champion
     #   result = core.run_test(testapi: 'https://tests.ostrails.eu/tests/test1/api', guid: 'https://example.org/target/456')
     #   puts result
     def run_test(testapi:, guid:, testid:)
+      if testapi.to_s.strip.empty?
+        return {
+          '@type' => 'ftr:TestResult',
+          '@id' => "urn:fairchampion:missing-endpoint:#{SecureRandom.uuid}",
+          'value' => 'indeterminate',
+          'log' => "No dcat:endpointURL was found for test #{testid}",
+          'outputFromTest' => { '@id' => testid }
+        }
+      end
+
       testurl = testapi
       begin
         result = RestClient::Request.execute(

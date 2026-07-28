@@ -94,6 +94,15 @@ RSpec.describe Champion::Core do
         expect(error.message).to include('Timed out looking up endpoint')
       }
     end
+
+    it 'returns nil when the FDP index has no endpoint for the test' do
+      allow(SPARQL::Client).to receive(:new).and_return(sparql_client)
+      allow(sparql_client).to receive(:query).and_return([])
+
+      endpoint = core.get_test_endpoint_for_testid(testid: 'https://tests.example/missing')
+
+      expect(endpoint).to be_nil
+    end
   end
 
   describe '#execute_on_endpoints' do
@@ -174,6 +183,20 @@ RSpec.describe Champion::Core do
       )
 
       expect(result['error']).to include('network unavailable')
+    end
+
+    it 'returns an indeterminate test result when the endpoint is missing' do
+      testid = 'https://tests.example/missing'
+
+      result = core.run_test(testapi: nil, guid: subject, testid: testid)
+
+      expect(result).to include(
+        '@type' => 'ftr:TestResult',
+        'value' => 'indeterminate',
+        'log' => "No dcat:endpointURL was found for test #{testid}",
+        'outputFromTest' => { '@id' => testid }
+      )
+      expect(result['@id']).to start_with('urn:fairchampion:missing-endpoint:')
     end
   end
 
