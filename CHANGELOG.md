@@ -2,6 +2,20 @@
 
 All notable changes to FAIR Champion are documented here.
 
+## [1.1.11] - 2026-07-16
+
+### Added
+- Full user documentation in the README: key concepts, a walk-through of every homepage function (browsing/executing metric tests, running benchmark quality assessments, registering algorithms and tests) with screenshot placeholders in `docs/images/`, API curl examples, deployment instructions, and configuration reference
+
+### Fixed
+- `Gemfile.lock` re-synced to gem version 1.1.11 — CI runs bundler in frozen mode (`bundler-cache: true`), which fails whenever the locked path-gem version lags behind the gemspec
+- Dockerfile: `bundle install --without development test` replaced with `bundle config set --local without 'development test' && bundle install` — the lockfile pins Bundler 4.0.3, which removed the `--without` flag, so the image build failed
+
+## [1.1.10] - 2026-07-02
+
+### Changed
+- Dockerfile no longer installs the `development, :test` gem group (`rubocop`, `rspec`, `rspec-openapi`, `pry`, `webmock`, `vcr`, `simplecov`, `rack-test`) in the production image, and no longer installs a pinned `bundler:2.3.12` that was immediately superseded by the `Gemfile.lock`-locked `4.0.3` — both were pure wasted build time since `entrypoint.sh` only runs `run.rb`
+
 ## [1.1.9] - 2026-07-02
 
 ### Added
